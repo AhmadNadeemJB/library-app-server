@@ -29,14 +29,14 @@ app.use(
   session({
     secret: "Romania",
     resave: false,
-    // proxy: true, // Required for Heroku & Digital Ocean (regarding X-Forwarded-For)
+    proxy: true, // Required for Heroku & Digital Ocean (regarding X-Forwarded-For)
     name: "BigDaddyG",
     saveUninitialized: false,
-    // cookie: {
-    //   secure: true, // required for cookies to work on HTTPS
-    //   httpOnly: false,
-    //   sameSite: "none",
-    // },
+    cookie: {
+      secure: true, // required for cookies to work on HTTPS
+      httpOnly: false,
+      sameSite: "none",
+    },
     cookie: {
       httpOnly: true,
       sameSite: "strict",
