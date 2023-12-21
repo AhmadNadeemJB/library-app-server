@@ -12,9 +12,15 @@ async function connectToDB() {
 connectToDB();
 
 const userSchema = new mongoose.Schema({
-  fullname: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  fullname: { type: String, required: true, maxlength: 50 },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    match: /^\S+@\S+\.\S+$/,
+    maxlength: 200,
+  },
+  password: { type: String, required: true, minlength: 6, maxlength: 200 },
   favoriteBooks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }],
   reviewedBooks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }],
 });
