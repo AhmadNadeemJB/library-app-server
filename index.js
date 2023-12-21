@@ -37,11 +37,11 @@ app.use(
       httpOnly: false,
       sameSite: "none",
     },
-    cookie: {
-      httpOnly: true,
-      sameSite: "strict",
-      // Add other cookie attributes as needed
-    },
+    // cookie: {
+    //   httpOnly: true,
+    //   sameSite: "strict",
+    //   // Add other cookie attributes as needed
+    // },
   })
 );
 app.use(passport.initialize());
