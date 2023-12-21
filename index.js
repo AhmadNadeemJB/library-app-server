@@ -32,16 +32,17 @@ app.use(
     proxy: true, // Required for Heroku & Digital Ocean (regarding X-Forwarded-For)
     name: "BigDaddyG",
     saveUninitialized: false,
-    cookie: {
-      secure: true, // required for cookies to work on HTTPS
-      httpOnly: false,
-      sameSite: "none",
-    },
     // cookie: {
-    //   httpOnly: true,
-    //   sameSite: "strict",
-    //   // Add other cookie attributes as needed
+    //   secure: true, // required for cookies to work on HTTPS
+    //   httpOnly: false,
+    //   sameSite: "none",
     // },
+    
+    cookie: {
+      httpOnly: true,
+      sameSite: "strict",
+      // Add other cookie attributes as needed
+    },
   })
 );
 app.use(passport.initialize());
