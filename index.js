@@ -33,7 +33,7 @@ app.use(
     name: "BigDaddyG",
     saveUninitialized: false,
     cookie: {
-      secure: true, // required for cookies to work on HTTPS
+      secure: true, // required for cookies to work on HTTPSs
       httpOnly: false,
       sameSite: "none",
     },
