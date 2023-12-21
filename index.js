@@ -29,12 +29,19 @@ app.use(
   session({
     secret: "Romania",
     resave: false,
+    proxy: true, // Required for Heroku & Digital Ocean (regarding X-Forwarded-For)
+    name: "BigDaddyG",
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,
-      sameSite: "strict",
-      // Add other cookie attributes as needed
+      secure: true, // required for cookies to work on HTTPS
+      httpOnly: false,
+      sameSite: "none",
     },
+    // cookie: {
+    //   httpOnly: true,
+    //   sameSite: "strict",
+    //   // Add other cookie attributes as needed
+    // },
   })
 );
 app.use(passport.initialize());
@@ -161,7 +168,7 @@ app.post(
   function (req, res) {
     const user = req.user;
 
-    req.login(user, function (err) {
+    req.logIn(user, function (err) {
       if (err) {
         console.error(err);
         return res.status(500).json({ error: "Internal Server Error" });
