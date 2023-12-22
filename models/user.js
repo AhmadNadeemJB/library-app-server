@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
     unique: true,
     match: /^\S+@\S+\.\S+$/,
     maxlength: 200,
+    lowercase: true,
   },
   password: { type: String, required: true, minlength: 6, maxlength: 200 },
   favoriteBooks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }],

@@ -2,7 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const Joi = require('joi');
+const Joi = require("joi");
 
 // Passport
 const passport = require("passport");
@@ -33,17 +33,20 @@ app.use(
     proxy: true, // Required for Heroku & Digital Ocean (regarding X-Forwarded-For)
     name: "BigDaddyG",
     saveUninitialized: false,
-    cookie: {
-      secure: true, // required for cookies to work on HTTPSs
-      httpOnly: false,
-      sameSite: "none",
-    },
-    
+
+    // // For Cloud
     // cookie: {
-    //   httpOnly: true,
-    //   sameSite: "strict",
-    //   // Add other cookie attributes as needed
+    //   secure: true, // required for cookies to work on HTTPSs
+    //   httpOnly: false,
+    //   sameSite: "none",
     // },
+
+    // For Localhost
+    cookie: {
+      httpOnly: true,
+      sameSite: "strict",
+      // Add other cookie attributes as needed
+    },
   })
 );
 app.use(passport.initialize());
@@ -102,6 +105,7 @@ async function connectToDB() {
       { useNewUrlParser: true, useUnifiedTopology: true }
     );
     console.log("Connected to DB from index.js");
+
   } catch (error) {
     // Handle connection errors
     handleError(error);
@@ -118,91 +122,131 @@ app.get("/", (req, res) => {
 
 // Routes for user authentication
 
-// // Register route
-// app.post("/register", async (req, res) => {
-//   try {
-//     const { email, password, fullname } = req.body;
-
-//     // Check if the email is already registered
-//     const existingUser = await userModel.findOne({ email });
-//     if (existingUser) {
-//       return res.status(400).json({ message: "Email is already registered." });
-//     }
-//     // Hash the password before saving it
-//     const hashedPassword = await bcrypt.hash(password, 10);
-
-//     // Create a new user with the hashed password
-//     const newUser = new userModel({
-//       email,
-//       password: hashedPassword,
-//       fullname,
-//     });
-//     await newUser.save();
-
-//     return res
-//       .status(201)
-//       .json({ message: "User registered successfully." })
-//       .send(req.user);
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({ error: "Server Error" });
-//   }
-// });
-
-// Schema for Register validation
+// // Schema for Register validation
 const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).max(20).required(),
   fullname: Joi.string().required(),
 });
 
-app.post('/register', async (req, res, next) => {
-  try {
-    // Validate request body
-    const { error, value } = registerSchema.validate(req.body);
+app.post(
+  "/register",
+  async (req, res, next) => {
+    try {
+      // Validate request body
+      const { error, value } = registerSchema.validate(req.body);
 
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
+      if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+      }
+
+      // If validation passes, proceed to Passport authentication
+      return next();
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal Server Error" });
     }
+  },
+  passport.authenticate("local", {
+    failureMessage: "Incorrect Email or Password",
+    successMessage: "Authorized",
+  }),
+  async (req, res) => {
+    try {
+      const { email, password, fullname } = req.body;
 
-    // If validation passes, proceed to user registration
-    return next();
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: 'Internal Server Error' });
-  }
-}, async (req, res) => {
-  try {
-    const { email, password, fullname } = req.body;
+      // Check if the email is already registered
+      const existingUser = await userModel.findOne({ email });
+      if (existingUser) {
+        return res
+          .status(400)
+          .json({ message: "Email is already registered." });
+      }
 
-    // Check if the email is already registered
-    const existingUser = await userModel.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email is already registered.' });
+      // Hash the password before saving it
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create a new user with the hashed password
+      const newUser = new userModel({
+        email,
+        password: hashedPassword,
+        fullname,
+      });
+
+      await newUser.save();
+
+      return res
+        .status(201)
+        .json({ message: "User registered successfully." })
+        .send(req.user);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Server Error" });
     }
-
-    // Hash the password before saving it
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create a new user with the hashed password
-    const newUser = new userModel({
-      email,
-      password: hashedPassword,
-      fullname,
-    });
-
-    await newUser.save();
-
-    return res
-      .status(201)
-      .json({ message: 'User registered successfully.' })
-      .send(req.user);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Server Error' });
   }
-});
+);
 
+
+// // Schema for Register validation
+// const registerSchema = Joi.object({
+//   email: Joi.string().email().required(),
+//   password: Joi.string().min(6).max(20).required(),
+//   fullname: Joi.string().required(),
+// });
+
+// app.post(
+//   "/register",
+//   async (req, res, next) => {
+//     try {
+//       // Validate request body
+//       const { error, value } = registerSchema.validate(req.body);
+
+//       if (error) {
+//         return res.status(400).json({ error: error.details[0].message });
+//       }
+
+//       // If validation passes, proceed to user registration
+//       return next();
+//     } catch (err) {
+//       console.error(err);
+//       return res.status(500).json({ error: "Internal Server Error" });
+//     }
+//   },
+//   async (req, res) => {
+//     try {
+     
+//       const { email, password, fullname } = req.body;
+
+//       // Check if the email is already registered
+//       const existingUser = await userModel.findOne({ email });
+//       if (existingUser) {
+//         return res
+//           .status(400)
+//           .json({ message: "Email is already registered." });
+//       }
+
+//       // Hash the password before saving it
+//       const hashedPassword = await bcrypt.hash(password, 10);
+
+//       // Create a new user with the hashed password
+//       const newUser = new userModel({
+//         email,
+//         password: hashedPassword,
+//         fullname,
+//       });
+
+//       await newUser.save();
+
+//       return res
+//         .status(201)
+//         .json({ message: "User registered successfully." })
+//         .send(req.user);
+//     } catch (error) {
+//       console.error(error);
+//       return res.status(500).json({ error: "Server Error" });
+//     }
+//   }
+// );
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -210,7 +254,7 @@ const loginSchema = Joi.object({
 });
 
 app.post(
-  '/login',
+  "/login",
   async (req, res, next) => {
     try {
       // Validate request body
@@ -224,12 +268,12 @@ app.post(
       return next();
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Internal Server Error' });
+      return res.status(500).json({ error: "Internal Server Error" });
     }
   },
-  passport.authenticate('local', {
-    failureMessage: 'Incorrect Email or Password',
-    successMessage: 'Authorized',
+  passport.authenticate("local", {
+    failureMessage: "Incorrect Email or Password",
+    successMessage: "Authorized",
   }),
   function (req, res) {
     const user = req.user;
@@ -237,14 +281,13 @@ app.post(
     req.logIn(user, function (err) {
       if (err) {
         console.error(err);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({ error: "Internal Server Error" });
       }
 
       res.json(user);
     });
   }
 );
-
 
 // Logout route
 // app.get("/logout", function (req, res) {
