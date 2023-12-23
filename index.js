@@ -34,19 +34,19 @@ app.use(
     name: "BigDaddyG",
     saveUninitialized: false,
 
-    // // For Cloud
-    // cookie: {
-    //   secure: true, // required for cookies to work on HTTPSs
-    //   httpOnly: false,
-    //   sameSite: "none",
-    // },
-
-    // For Localhost
+    // For Cloud
     cookie: {
-      httpOnly: true,
-      sameSite: "strict",
-      // Add other cookie attributes as needed
+      secure: true, // required for cookies to work on HTTPSs
+      httpOnly: false,
+      sameSite: "none",
     },
+
+    // // For Localhost
+    // cookie: {
+    //   httpOnly: true,
+    //   sameSite: "strict",
+    //   // Add other cookie attributes as needed
+    // },
   })
 );
 app.use(passport.initialize());
@@ -55,7 +55,7 @@ const bcrypt = require("bcrypt");
 // Passport local strategy configuration
 passport.use(
   new LocalStrategy(
-    { usernameField: "email", passwordField: "password" },
+    { fullnameField: "email", passwordField: "password" },
     async function (email, password, done) {
       try {
         const user = await userModel.findOne({ email });
@@ -105,7 +105,6 @@ async function connectToDB() {
       { useNewUrlParser: true, useUnifiedTopology: true }
     );
     console.log("Connected to DB from index.js");
-
   } catch (error) {
     // Handle connection errors
     handleError(error);
@@ -122,7 +121,7 @@ app.get("/", (req, res) => {
 
 // Routes for user authentication
 
-// // Schema for Register validation
+// Schema for Register validation
 const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).max(20).required(),
@@ -140,17 +139,13 @@ app.post(
         return res.status(400).json({ error: error.details[0].message });
       }
 
-      // If validation passes, proceed to Passport authentication
+      // If validation passes, proceed to user registration
       return next();
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Internal Server Error" });
     }
   },
-  passport.authenticate("local", {
-    failureMessage: "Incorrect Email or Password",
-    successMessage: "Authorized",
-  }),
   async (req, res) => {
     try {
       const { email, password, fullname } = req.body;
@@ -185,68 +180,6 @@ app.post(
     }
   }
 );
-
-
-// // Schema for Register validation
-// const registerSchema = Joi.object({
-//   email: Joi.string().email().required(),
-//   password: Joi.string().min(6).max(20).required(),
-//   fullname: Joi.string().required(),
-// });
-
-// app.post(
-//   "/register",
-//   async (req, res, next) => {
-//     try {
-//       // Validate request body
-//       const { error, value } = registerSchema.validate(req.body);
-
-//       if (error) {
-//         return res.status(400).json({ error: error.details[0].message });
-//       }
-
-//       // If validation passes, proceed to user registration
-//       return next();
-//     } catch (err) {
-//       console.error(err);
-//       return res.status(500).json({ error: "Internal Server Error" });
-//     }
-//   },
-//   async (req, res) => {
-//     try {
-     
-//       const { email, password, fullname } = req.body;
-
-//       // Check if the email is already registered
-//       const existingUser = await userModel.findOne({ email });
-//       if (existingUser) {
-//         return res
-//           .status(400)
-//           .json({ message: "Email is already registered." });
-//       }
-
-//       // Hash the password before saving it
-//       const hashedPassword = await bcrypt.hash(password, 10);
-
-//       // Create a new user with the hashed password
-//       const newUser = new userModel({
-//         email,
-//         password: hashedPassword,
-//         fullname,
-//       });
-
-//       await newUser.save();
-
-//       return res
-//         .status(201)
-//         .json({ message: "User registered successfully." })
-//         .send(req.user);
-//     } catch (error) {
-//       console.error(error);
-//       return res.status(500).json({ error: "Server Error" });
-//     }
-//   }
-// );
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -347,7 +280,7 @@ app.delete("/api/user/:id", isAuthenticated, async (req, res) => {
 app.put("/api/user/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = req.params.id;
-    const { email, password, username } = req.body;
+    const { email, password, fullname } = req.body;
 
     // Check if the user exists
     const user = await userModel.findById(userId);
@@ -358,7 +291,7 @@ app.put("/api/user/:id", isAuthenticated, async (req, res) => {
     // Update user properties
     user.email = email || user.email; // Update email if provided
     user.password = password || user.password; // Update password if provided
-    user.username = username || user.username; // Update username if provided
+    user.fullname = fullname || user.fullname; // Update fullname if provided
 
     // Save the updated user to the database
     await user.save();
