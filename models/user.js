@@ -12,7 +12,7 @@ async function connectToDB() {
 connectToDB();
 
 const userSchema = new mongoose.Schema({
-  fullname: { type: String, required: true, maxlength: 50 },
+  username: { type: String, required: true, maxlength: 50 },
   email: {
     type: String,
     required: true,

@@ -55,13 +55,16 @@ const bcrypt = require("bcrypt");
 // Passport local strategy configuration
 passport.use(
   new LocalStrategy(
-    { fullnameField: "email", passwordField: "password" },
+    { usernameField: "email", passwordField: "password" },
     async function (email, password, done) {
       try {
         const user = await userModel.findOne({ email });
 
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-          return done(null, false, { message: "Incorrect email or password." });
+        if (!user) {
+          return done(null, false, { message: "Email not registered." });
+        }
+        if (!(await bcrypt.compare(password, user.password))) {
+          return done(null, false, { message: "Incorrect password." });
         }
 
         return done(null, user);
@@ -125,7 +128,7 @@ app.get("/", (req, res) => {
 const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).max(20).required(),
-  fullname: Joi.string().required(),
+  username: Joi.string().required(),
 });
 
 app.post(
@@ -148,7 +151,7 @@ app.post(
   },
   async (req, res) => {
     try {
-      const { email, password, fullname } = req.body;
+      const { email, password, username } = req.body;
 
       // Check if the email is already registered
       const existingUser = await userModel.findOne({ email });
@@ -165,7 +168,7 @@ app.post(
       const newUser = new userModel({
         email,
         password: hashedPassword,
-        fullname,
+        username,
       });
 
       await newUser.save();
@@ -192,9 +195,10 @@ app.post(
     try {
       // Validate request body
       const { error, value } = loginSchema.validate(req.body);
-
       if (error) {
-        return res.status(400).json({ error: error.details[0].message });
+        return res.status(400).json({
+          error: error.details[0].message,
+        });
       }
 
       // If validation passes, proceed to passport authentication
@@ -204,34 +208,26 @@ app.post(
       return res.status(500).json({ error: "Internal Server Error" });
     }
   },
-  passport.authenticate("local", {
-    failureMessage: "Incorrect Email or Password",
-    successMessage: "Authorized",
-  }),
-  function (req, res) {
-    const user = req.user;
-
-    req.logIn(user, function (err) {
+  (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
       if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Internal Server Error" });
+        return next(err);
       }
-
-      res.json(user);
-    });
+      if (!user) {
+        // Authentication failed
+        return res.status(401).json({ error: info.message });
+      }
+      // Authentication successful, log in the user
+      req.logIn(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        // User logged in successfully
+        return res.json(user);
+      });
+    })(req, res, next);
   }
 );
-
-// Logout route
-// app.get("/logout", function (req, res) {
-//   req.logout(function (err) {
-//     if (err) {
-//       console.error(err);
-//       return res.status(500).json({ error: "Internal Server Error" });
-//     }
-//     res.redirect("/");
-//   });
-// });
 
 // Logout route
 app.get("/logout", (req, res) => {
@@ -280,7 +276,7 @@ app.delete("/api/user/:id", isAuthenticated, async (req, res) => {
 app.put("/api/user/:id", isAuthenticated, async (req, res) => {
   try {
     const userId = req.params.id;
-    const { email, password, fullname } = req.body;
+    const { email, password, username } = req.body;
 
     // Check if the user exists
     const user = await userModel.findById(userId);
@@ -291,7 +287,7 @@ app.put("/api/user/:id", isAuthenticated, async (req, res) => {
     // Update user properties
     user.email = email || user.email; // Update email if provided
     user.password = password || user.password; // Update password if provided
-    user.fullname = fullname || user.fullname; // Update fullname if provided
+    user.username = username || user.username; // Update username if provided
 
     // Save the updated user to the database
     await user.save();
