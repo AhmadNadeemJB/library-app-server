@@ -132,7 +132,7 @@ const registerSchema = Joi.object({
 });
 
 app.post(
-  "/register",
+  '/register',
   async (req, res, next) => {
     try {
       // Validate request body
@@ -146,7 +146,7 @@ app.post(
       return next();
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: "Internal Server Error" });
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
   },
   async (req, res) => {
@@ -156,9 +156,7 @@ app.post(
       // Check if the email is already registered
       const existingUser = await userModel.findOne({ email });
       if (existingUser) {
-        return res
-          .status(400)
-          .json({ message: "Email is already registered." });
+        return res.status(400).json({ message: 'Email is already registered.' });
       }
 
       // Hash the password before saving it
@@ -173,16 +171,83 @@ app.post(
 
       await newUser.save();
 
-      return res
-        .status(201)
-        .json({ message: "User registered successfully." })
-        .send(req.user);
+      // Log in the user after registration
+      req.logIn(newUser, (err) => {
+        if (err) {
+          return next(err);
+        }
+        // User logged in successfully
+        return res.status(201).json({ message: 'User registered successfully.' });
+      });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Server Error" });
+      return res.status(500).json({ error: 'Server Error' });
     }
   }
 );
+
+
+// app.post(
+//   "/register",
+//   async (req, res, next) => {
+//     try {
+//       // Validate request body
+//       const { error, value } = registerSchema.validate(req.body);
+
+//       if (error) {
+//         return res.status(400).json({ error: error.details[0].message });
+//       }
+
+//       // If validation passes, proceed to user registration
+//       return next();
+//     } catch (err) {
+//       console.error(err);
+//       return res.status(500).json({ error: "Internal Server Error" });
+//     }
+//   },
+//   async (req, res) => {
+//     try {
+//       const { email, password, username } = req.body;
+
+//       // Check if the email is already registered
+//       const existingUser = await userModel.findOne({ email });
+//       if (existingUser) {
+//         return res
+//           .status(400)
+//           .json({ message: "Email is already registered." });
+//       }
+
+//       // Hash the password before saving it
+//       const hashedPassword = await bcrypt.hash(password, 10);
+
+//       // Create a new user with the hashed password
+//       const newUser = new userModel({
+//         email,
+//         password: hashedPassword,
+//         username,
+//       });
+
+//       await newUser.save();
+
+//       // Log in the user after registration
+//       req.logIn(newUser, (err) => {
+//         if (err) {
+//           return next(err);
+//         }
+//         // User logged in successfully
+//         return res.json(newUser);
+//       });
+
+//       return res
+//         .status(201)
+//         .json({ message: "User registered successfully." })
+//         .send(req.user);
+//     } catch (error) {
+//       console.error(error);
+//       return res.status(500).json({ error: "Server Error" });
+//     }
+//   }
+// );
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
