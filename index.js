@@ -34,19 +34,19 @@ app.use(
     name: "BigDaddyG",
     saveUninitialized: false,
 
-    // For Cloud
-    cookie: {
-      secure: true, // required for cookies to work on HTTPSs
-      httpOnly: false,
-      sameSite: "none",
-    },
-
-    // // For Localhost
+    // // For Cloud
     // cookie: {
-    //   httpOnly: true,
-    //   sameSite: "strict",
-    //   // Add other cookie attributes as needed
+    //   secure: true, // required for cookies to work on HTTPSs
+    //   httpOnly: false,
+    //   sameSite: "none",
     // },
+
+    // For Localhost
+    cookie: {
+      httpOnly: true,
+      sameSite: "strict",
+      // Add other cookie attributes as needed
+    },
   })
 );
 app.use(passport.initialize());
@@ -132,7 +132,7 @@ const registerSchema = Joi.object({
 });
 
 app.post(
-  '/register',
+  "/register",
   async (req, res, next) => {
     try {
       // Validate request body
@@ -146,7 +146,7 @@ app.post(
       return next();
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Internal Server Error' });
+      return res.status(500).json({ error: "Internal Server Error" });
     }
   },
   async (req, res) => {
@@ -156,7 +156,9 @@ app.post(
       // Check if the email is already registered
       const existingUser = await userModel.findOne({ email });
       if (existingUser) {
-        return res.status(400).json({ message: 'Email is already registered.' });
+        return res
+          .status(400)
+          .json({ message: "Email is already registered." });
       }
 
       // Hash the password before saving it
@@ -177,77 +179,16 @@ app.post(
           return next(err);
         }
         // User logged in successfully
-        return res.status(201).json({ message: 'User registered successfully.' });
+        return res
+          .status(201)
+          .json({ message: "User registered successfully." });
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: 'Server Error' });
+      return res.status(500).json({ error: "Server Error" });
     }
   }
 );
-
-
-// app.post(
-//   "/register",
-//   async (req, res, next) => {
-//     try {
-//       // Validate request body
-//       const { error, value } = registerSchema.validate(req.body);
-
-//       if (error) {
-//         return res.status(400).json({ error: error.details[0].message });
-//       }
-
-//       // If validation passes, proceed to user registration
-//       return next();
-//     } catch (err) {
-//       console.error(err);
-//       return res.status(500).json({ error: "Internal Server Error" });
-//     }
-//   },
-//   async (req, res) => {
-//     try {
-//       const { email, password, username } = req.body;
-
-//       // Check if the email is already registered
-//       const existingUser = await userModel.findOne({ email });
-//       if (existingUser) {
-//         return res
-//           .status(400)
-//           .json({ message: "Email is already registered." });
-//       }
-
-//       // Hash the password before saving it
-//       const hashedPassword = await bcrypt.hash(password, 10);
-
-//       // Create a new user with the hashed password
-//       const newUser = new userModel({
-//         email,
-//         password: hashedPassword,
-//         username,
-//       });
-
-//       await newUser.save();
-
-//       // Log in the user after registration
-//       req.logIn(newUser, (err) => {
-//         if (err) {
-//           return next(err);
-//         }
-//         // User logged in successfully
-//         return res.json(newUser);
-//       });
-
-//       return res
-//         .status(201)
-//         .json({ message: "User registered successfully." })
-//         .send(req.user);
-//     } catch (error) {
-//       console.error(error);
-//       return res.status(500).json({ error: "Server Error" });
-//     }
-//   }
-// );
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -294,6 +235,77 @@ app.post(
   }
 );
 
+app.patch(
+  "/update",
+  isAuthenticated, // Use the isAuthenticated middleware here
+  async (req, res) => {
+    try {
+      const { username, currentPassword, newPassword, email } = req.body;
+
+      // Get the currently logged-in user
+      const currentUser = req.user;
+
+      // Verify the current password
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        currentUser.password
+      );
+
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid current password." });
+      }
+
+      if (!(username || newPassword || email)) {
+        return res.status(401).json({ message: "No fields given to update." });
+      }
+      if (username && username === currentUser.username) {
+        // Check if new inputs are the same as old ones
+        return res.status(400).json({
+          message: "New username must be different from the current one.",
+        });
+      }
+
+      if (email && email === currentUser.email) {
+        return res.status(400).json({
+          message: "New email must be different from the current one.",
+        });
+      }
+
+      // Update user information if provided
+      if (username) {
+        currentUser.username = username;
+      }
+
+      if (newPassword) {
+        // Check if new password is different from the current one
+        if (await bcrypt.compare(newPassword, currentUser.password)) {
+          return res.status(400).json({
+            message: "New password must be different from the current one.",
+          });
+        }
+
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        currentUser.password = hashedNewPassword;
+      }
+
+      if (email) {
+        currentUser.email = email;
+      }
+
+      // Save the updated user information
+      await currentUser.save();
+
+      return res.json({
+        message: "User information updated successfully.",
+        user: currentUser,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Server Error" });
+    }
+  }
+);
+
 // Logout route
 app.get("/logout", (req, res) => {
   // Use passport's built-in logout method
@@ -307,7 +319,7 @@ app.get("/logout", (req, res) => {
     // Destroy the session
     req.session.destroy(() => {
       // Clear the cookie
-      res.clearCookie("connect.sid");
+      res.clearCookie("BigDaddyG");
 
       // Redirect to home page
       res.redirect("/");
@@ -317,63 +329,56 @@ app.get("/logout", (req, res) => {
 
 // Delete account route
 // ________________________________ Check if this is working ____________________________________
-app.delete("/api/user/:id", isAuthenticated, async (req, res) => {
+
+app.delete("/delete", isAuthenticated, async (req, res) => {
   try {
-    // Ensure the user is authenticated before allowing account deletion
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    // Retrieve a specific user by ID from the database
 
-    // Delete the user account
-    await userModel.findByIdAndRemove(req.user._id);
+    const { currentPassword } = req.body;
 
-    // Logout the user after account deletion
-    req.logout();
+    // Get the currently logged-in user
+    const currentUser = req.user;
 
-    return res.status(200).json({ message: "Account deleted successfully." });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-// Update Account
-app.put("/api/user/:id", isAuthenticated, async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const { email, password, username } = req.body;
-
-    // Check if the user exists
-    const user = await userModel.findById(userId);
-    if (!user) {
+    if (!currentUser) {
+      // If the user is not found, send a 404 Not Found response
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Update user properties
-    user.email = email || user.email; // Update email if provided
-    user.password = password || user.password; // Update password if provided
-    user.username = username || user.username; // Update username if provided
+    // Verify the current password
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      currentUser.password
+    );
 
-    // Save the updated user to the database
-    await user.save();
-
-    return res.status(200).json({ message: "User updated successfully", user });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-app.get("/api/user/:id", async (req, res) => {
-  try {
-    // Retrieve a specific user by ID from the database
-    const user = await userModel.findById(req.params.id);
-    if (!user) {
-      // If the user is not found, send a 404 Not Found response
-      res.status(404).json({ error: "User not found" });
-      return;
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid current password." });
     }
-    res.json(user);
+
+    // Get the currently logged-in user ID
+    const userId = currentUser._id;
+
+    // Delete the user by ID
+    await userModel.findByIdAndDelete(userId);
+
+    // Log out the user
+    req.logout((err) => {
+      // Handle any errors
+      if (err) {
+        console.error(err);
+        return res
+          .status(500)
+          .json({ error: "Internal Server Error while logging out" });
+      }
+
+      // Destroy the session
+      req.session.destroy(() => {
+        // Clear the cookie
+        res.clearCookie("BigDaddyG");
+
+        // Send the JSON response
+        return res.status(200).json({ message: "User deleted successfully." });
+      });
+    });
   } catch (error) {
     // Handle errors and send a 500 Internal Server Error response
     console.error(error);
