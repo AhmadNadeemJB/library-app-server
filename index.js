@@ -101,20 +101,13 @@ const bookModel = require("./models/books");
 
 // Function to connect to MongoDB
 async function connectToDB() {
-  try {
-    // Connect to the MongoDB database
-    await mongoose.connect(
-      "mongodb+srv://ahmadnadeemjb:Ahmad@cluster0.hqqhtpr.mongodb.net/BookLibrarySystem?retryWrites=true&w=majority",
-      { useNewUrlParser: true, useUnifiedTopology: true }
-    );
-    console.log("Connected to DB from index.js");
-  } catch (error) {
-    // Handle connection errors
-    handleError(error);
-  }
+  mongoose
+    .connect(
+      "mongodb+srv://ahmadnadeemjb:Ahmad@cluster0.hqqhtpr.mongodb.net/BookLibrarySystem?retryWrites=true&w=majority"
+    )
+    .then(console.log("Connected to DB from index.js"))
+    .catch((error) => handleError(error));
 }
-
-// Call the function to connect to the database
 connectToDB();
 
 // Home
@@ -245,6 +238,12 @@ app.patch(
       // Get the currently logged-in user
       const currentUser = req.user;
 
+      if (!currentPassword) {
+        return res.status(401).json({
+          message: "Current password is required to make any changes",
+        });
+      }
+
       // Verify the current password
       const isPasswordValid = await bcrypt.compare(
         currentPassword,
@@ -258,16 +257,34 @@ app.patch(
       if (!(username || newPassword || email)) {
         return res.status(401).json({ message: "No fields given to update." });
       }
+
+      
+      if (email) {
+        if (email.toLowerCase() === currentUser.email) {
+          return res.status(400).json({
+            message: "New email must be different from the current one.",
+          });
+        }
+
+        // Check if the new email is already registered with another account
+        const existingUser = await userModel.findOne({ email });
+        if (
+          existingUser &&
+          existingUser._id.toString() !== currentUser._id.toString()
+        ) {
+          return res.status(400).json({
+            message: "Email is already registered with another account.",
+          });
+        }
+
+        // Update the email
+        currentUser.email = email;
+      }
+
       if (username && username === currentUser.username) {
         // Check if new inputs are the same as old ones
         return res.status(400).json({
           message: "New username must be different from the current one.",
-        });
-      }
-
-      if (email && email === currentUser.email) {
-        return res.status(400).json({
-          message: "New email must be different from the current one.",
         });
       }
 
@@ -288,10 +305,6 @@ app.patch(
         currentUser.password = hashedNewPassword;
       }
 
-      if (email) {
-        currentUser.email = email;
-      }
-
       // Save the updated user information
       await currentUser.save();
 
@@ -301,7 +314,7 @@ app.patch(
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Server Error" });
+      return res.status(500).json({ error: "Server Error." });
     }
   }
 );
@@ -328,8 +341,6 @@ app.get("/logout", (req, res) => {
 });
 
 // Delete account route
-// ________________________________ Check if this is working ____________________________________
-
 app.delete("/delete", isAuthenticated, async (req, res) => {
   try {
     // Retrieve a specific user by ID from the database
@@ -395,7 +406,7 @@ function isAuthenticated(req, res, next) {
     return next(); // User is authenticated, proceed to the next middleware
   }
 
-  res.status(401).json({ error: "Unauthorized" });
+  res.status(401).json({ error: "Please logout and login again" });
 }
 
 // ----------------Books Endpoints--------------
