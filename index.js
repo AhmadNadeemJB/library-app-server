@@ -2,7 +2,6 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const Joi = require("joi");
 
 // Passport
 const passport = require("passport");
@@ -34,19 +33,19 @@ app.use(
     name: "BigDaddyG",
     saveUninitialized: false,
 
-    // For Cloud
-    cookie: {
-      secure: true, // required for cookies to work on HTTPSs
-      httpOnly: false,
-      sameSite: "none",
-    },
-
-    // // For Localhost
+    // // For Cloud
     // cookie: {
-    //   httpOnly: true,
-    //   sameSite: "strict",
-    //   // Add other cookie attributes as needed
+    //   secure: true, // required for cookies to work on HTTPSs
+    //   httpOnly: false,
+    //   sameSite: "none",
     // },
+
+    // For Localhost
+    cookie: {
+      httpOnly: true,
+      sameSite: "strict",
+      // Add other cookie attributes as needed
+    },
   })
 );
 app.use(passport.initialize());
@@ -117,12 +116,8 @@ app.get("/", (req, res) => {
 
 // Routes for user authentication
 
-// Schema for Register validation
-const registerSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).max(20).required(),
-  username: Joi.string().required(),
-});
+// Importing Schemas
+const { loginSchema, registerSchema, updateSchema } = require("./schema");
 
 app.post(
   "/register",
@@ -183,11 +178,6 @@ app.post(
   }
 );
 
-const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).max(20).required(),
-});
-
 app.post(
   "/login",
   async (req, res, next) => {
@@ -233,8 +223,14 @@ app.patch(
   isAuthenticated, // Use the isAuthenticated middleware here
   async (req, res) => {
     try {
-      const { username, currentPassword, newPassword, email } = req.body;
+      const { error, value } = updateSchema.validate(req.body);
+      if (error) {
+        return res.status(400).json({
+          error: error.details[0].message,
+        });
+      }
 
+      const { username, currentPassword, newPassword, email } = req.body;
       // Get the currently logged-in user
       const currentUser = req.user;
 
@@ -258,7 +254,6 @@ app.patch(
         return res.status(401).json({ message: "No fields given to update." });
       }
 
-      
       if (email) {
         if (email.toLowerCase() === currentUser.email) {
           return res.status(400).json({
