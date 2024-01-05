@@ -33,19 +33,19 @@ app.use(
     name: "BigDaddyG",
     saveUninitialized: false,
 
-    // // For Cloud
-    // cookie: {
-    //   secure: true, // required for cookies to work on HTTPSs
-    //   httpOnly: false,
-    //   sameSite: "none",
-    // },
-
-    // For Localhost
+    // For Cloud
     cookie: {
-      httpOnly: true,
-      sameSite: "strict",
-      // Add other cookie attributes as needed
+      secure: true, // required for cookies to work on HTTPSs
+      httpOnly: false,
+      sameSite: "none",
     },
+
+    // // For Localhost
+    // cookie: {
+    //   httpOnly: true,
+    //   sameSite: "strict",
+    //   // Add other cookie attributes as needed
+    // },
   })
 );
 app.use(passport.initialize());
