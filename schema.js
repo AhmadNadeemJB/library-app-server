@@ -32,7 +32,7 @@ module.exports.registerSchema = Joi.object({
     .min(3)
     .max(40)
     .trim()
-    .regex(/^([^\s]+)\s+([^\s]+)$/)
+    .regex(/^([^\s]+)\s+([^\s]+)(\s+[^\s]+)*$/)
     .message("Full Name must contain at least two words")
     .required()
     .messages({
@@ -67,7 +67,7 @@ module.exports.updateSchema = Joi.object({
     .min(3)
     .max(40)
     .trim()
-    .regex(/^([^\s]+)\s+([^\s]+)$/)
+    .regex(/^([^\s]+)\s+([^\s]+)(\s+[^\s]+)*$/)
     .message("Full Name must contain at least two words"),
   currentPassword: Joi.string()
     .min(8)
