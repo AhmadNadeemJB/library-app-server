@@ -2,11 +2,11 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const session = require("express-session");
 
 // Passport
 const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
-const session = require("express-session");
 
 const app = express();
 const port = 3000;
@@ -232,6 +232,7 @@ app.patch(
       const { username, currentPassword, newPassword, email } = req.body;
       // Get the currently logged-in user
       const currentUser = req.user;
+      
 
       if (!currentPassword) {
         return res.status(401).json({
@@ -335,10 +336,9 @@ app.get("/logout", (req, res) => {
 });
 
 // Delete account route
-app.delete("/delete", isAuthenticated, async (req, res) => {
+app.delete("/delete", async (req, res) => {
   try {
     // Retrieve a specific user by ID from the database
-
     const { currentPassword } = req.body;
 
     // Get the currently logged-in user
